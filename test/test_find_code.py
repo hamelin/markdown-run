@@ -27,7 +27,7 @@ def check_extract_code(
         file.flush()
         file.seek(0, 0)
 
-        assert code_expected == extract_code(cast(io.TextIOBase, file), num_line)
+        assert code_expected == extract_code(file.name, num_line)
 
 
 @pytest.mark.parametrize("lang", ["python", ""])
