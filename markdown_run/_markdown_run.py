@@ -2,10 +2,6 @@ import io
 from mistletoe import Document  # type: ignore
 
 
-def hello_world():
-    return "Hello world!"
-
-
 def extract_code(file: io.TextIOBase, line: int) -> str:
     doc = Document(file)
     assert len(doc.children) == 1
