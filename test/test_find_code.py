@@ -1,45 +1,42 @@
-from contextlib import contextmanager
+import io
 import pytest  # noqa
 from tempfile import NamedTemporaryFile
-from typing import Iterator
+from typing import (
+    cast,
+)
 
 from markdown_run import extract_code
 
 
-@contextmanager
-def note_temp(content: str) -> Iterator:
+CODE = """\
+import sys
+
+
+def func(x):
+    print(sys.executable + " " + x)
+"""
+
+
+def check_extract_code(
+    content_note: str,
+    num_line: int,
+    code_expected: str = CODE
+) -> None:
     with NamedTemporaryFile(mode="w+") as file:
-        print(content, file=file)
+        print(content_note, file=file)
         file.flush()
         file.seek(0, 0)
-        yield file
+
+        assert code_expected == extract_code(cast(io.TextIOBase, file), num_line)
 
 
-def test_only_python_code():
-    code = """\
-def hey():
-    return 0
-""".lstrip()
-    with note_temp(
+@pytest.mark.parametrize("lang", ["python", ""])
+def test_only_python_code(lang):
+    check_extract_code(
         f"""\
-```python
-{code}
+```{lang}
+{CODE}
 ```
-"""
-    ) as file:
-        assert extract_code(file, 2) == code
-
-
-def test_only_unlabeled_code():
-    code = """\
-def hey():
-    return 0
-"""
-    with note_temp(
-        f"""\
-```
-{code}
-```
-"""
-    ) as file:
-        assert extract_code(file, 2) == code
+""",
+        2
+    )
