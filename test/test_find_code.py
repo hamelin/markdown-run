@@ -30,13 +30,20 @@ def check_extract_code(
         assert code_expected == extract_code(file.name, num_line)
 
 
-@pytest.mark.parametrize("lang", ["python", ""])
-def test_only_python_code(lang):
+@pytest.mark.parametrize(
+    "lang,num_line",
+    [
+        ("python", 2),
+        ("", 2),
+        ("", 1),
+    ] + [("python", i) for i in range(3, 8)]
+)
+def test_only_python_code(lang, num_line):
     check_extract_code(
         f"""\
 ```{lang}
 {CODE}
 ```
 """,
-        2
+        num_line
     )
