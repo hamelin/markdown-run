@@ -1,6 +1,7 @@
-import obsessian as ob
 import pytest  # noqa
+
+from markdown_run import hello_world
 
 
 def test_hello():
-    assert ob.hello_world().startswith("Hello world")
+    assert hello_world().startswith("Hello world")

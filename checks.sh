@@ -11,12 +11,12 @@ function heading()
 
 
 heading "Unit and integration tests"
-pytest
+pytest test
 
 heading "Type checks"
-mypy obsessian test
+mypy markdown_run test
 
 heading "Style checks"
-flake8 obsessian test
+flake8 markdown_run test
 
 heading "ALL CHECKS PASS"
