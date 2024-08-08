@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-import io
+import itertools as it
 from mistletoe import Document  # type: ignore
+from mistletoe.block_token import BlockCode, CodeFence  # type: ignore
 import os
 from pathlib import Path
 from typing import Union
@@ -17,8 +18,20 @@ def extract_code(path_: Union[os.PathLike[str], str], line: int) -> str:
     if line > last_line:
         raise NoCodeThere(path, line)
 
-    assert len(doc.children) == 1
-    snippet = doc.children[0]
+    for i, (line_start, line_end) in enumerate(
+        it.pairwise([ch.line_number for ch in doc.children] + [last_line + 1])
+    ):
+        if line >= line_start and line < line_end:
+            snippet = doc.children[i]
+            break
+    else:
+        raise RuntimeError(
+            f"Supposed to be able to find a snippet in file {path}, at line {line}. "
+            "Concurrent modification?"
+        )
+
+    if not isinstance(snippet, (BlockCode, CodeFence)):
+        raise NoCodeThere(path, line)
     assert snippet.language in {"", "python"}
     return snippet.content.rstrip() + "\n"
 

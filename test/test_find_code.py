@@ -1,26 +1,43 @@
-import io
+from dataclasses import dataclass
+import itertools as it
 import pytest  # noqa
 from tempfile import NamedTemporaryFile
 from typing import (
-    cast,
+    Sequence,
 )
 
 from markdown_run import extract_code, NoCodeThere
 
 
-CODE = """\
+@dataclass
+class Snippet:
+    code: str
+
+    def __str__(self) -> str:
+        return self.code
+
+    @property
+    def lines(self) -> Sequence[str]:
+        return str(self).split("\n")
+
+    @property
+    def num_lines(self) -> int:
+        return len(self.lines)
+
+
+CODE = Snippet("""\
 import sys
 
 
 def func(x):
     print(sys.executable + " " + x)
-"""
+""")
 
 
 def check_extract_code(
     content_note: str,
     num_line: int,
-    code_expected: str = CODE
+    code_expected: str = str(CODE)
 ) -> None:
     with NamedTemporaryFile(mode="w+") as file:
         file.write(content_note)
@@ -65,3 +82,46 @@ def test_no_code_beyond_end(num_line):
 """,
             num_line
         )
+
+
+@pytest.mark.parametrize(
+    "above,below,offset",
+    it.starmap(
+        lambda ab, n: (*ab, n),
+        it.product(
+            [
+                ("asdf", "qwerty"),
+                ("asdf\n", "\nqewrty"),
+                ("asdf", ""),
+                ("", "asdf"),
+                (
+                    """\
+asdf
+
+- qwerty
+- zxcv
+
+""",
+                    """\
+
+> asdf
+>> qwerty
+> zxcv
+"""
+                )
+            ],
+            range(CODE.num_lines)
+        )
+    )
+)
+def test_one_code_framed_by_content(above, below, offset):
+    check_extract_code(
+        f"""\
+{above}
+```python
+{CODE}\
+```
+{below}
+""",
+        1 + len(above.split("\n")) + offset
+    )
