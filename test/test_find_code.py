@@ -125,3 +125,23 @@ def test_one_code_framed_by_content(above, below, offset):
 """,
         1 + len(above.split("\n")) + offset
     )
+
+
+@pytest.mark.parametrize("line", [1, 2, 11, 13])
+def test_one_code_line_outside_it(line):
+    with pytest.raises(NoCodeThere):
+        check_extract_code(
+            f"""\
+Some text above
+
+```python
+{CODE}\
+```
+
+More text below.
+
+> One could even land in this quote!
+
+""",
+            line
+        )
