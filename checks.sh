@@ -17,6 +17,4 @@ heading "Type checks"
 mypy markdown_run test
 
 heading "Style checks"
-flake8 markdown_run test
-
-heading "ALL CHECKS PASS"
+flake8 markdown_run test && echo "Success: no style issue found."
