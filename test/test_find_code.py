@@ -23,7 +23,7 @@ def check_extract_code(
     code_expected: str = CODE
 ) -> None:
     with NamedTemporaryFile(mode="w+") as file:
-        print(content_note, file=file)
+        file.write(content_note)
         file.flush()
         file.seek(0, 0)
 
@@ -42,7 +42,7 @@ def test_only_python_code(lang, num_line):
     check_extract_code(
         f"""\
 ```{lang}
-{CODE}
+{CODE}\
 ```
 """,
         num_line
@@ -54,13 +54,13 @@ def test_no_code_empty():
         check_extract_code("", 1)
 
 
-@pytest.mark.parametrize("num_line", [8, 9, 1000])
+@pytest.mark.parametrize("num_line", [9, 10, 1000])
 def test_no_code_beyond_end(num_line):
     with pytest.raises(NoCodeThere):
         check_extract_code(
             f"""\
 ```
-{CODE}
+{CODE}\
 ```
 """,
             num_line

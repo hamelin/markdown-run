@@ -6,15 +6,14 @@ from pathlib import Path
 from typing import Union
 
 
-def extract_code(path_: Union[os.PathLike, Path], line: int) -> str:
+def extract_code(path_: Union[os.PathLike[str], str], line: int) -> str:
+    assert line >= 0
     path = Path(path_)
     with path.open(mode="r", encoding="utf-8") as file:
         doc = Document(file)
     if not doc.children:
         raise NoCodeThere(path, line)
-    last_line = (
-        doc.children[-1].line_number + len(doc.children[-1].content.split("\n")) - 1
-    )
+    last_line = len(path.read_text().split("\n"))
     if line > last_line:
         raise NoCodeThere(path, line)
 
