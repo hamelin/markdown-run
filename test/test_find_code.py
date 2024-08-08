@@ -5,7 +5,7 @@ from typing import (
     cast,
 )
 
-from markdown_run import extract_code
+from markdown_run import extract_code, NoCodeThere
 
 
 CODE = """\
@@ -47,3 +47,21 @@ def test_only_python_code(lang, num_line):
 """,
         num_line
     )
+
+
+def test_no_code_empty():
+    with pytest.raises(NoCodeThere):
+        check_extract_code("", 1)
+
+
+@pytest.mark.parametrize("num_line", [8, 9, 1000])
+def test_no_code_beyond_end(num_line):
+    with pytest.raises(NoCodeThere):
+        check_extract_code(
+            f"""\
+```
+{CODE}
+```
+""",
+            num_line
+        )
