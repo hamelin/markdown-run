@@ -32,6 +32,10 @@ import sys
 def func(x):
     print(sys.executable + " " + x)
 """)
+ALT = Snippet("""\
+from pathlib import Path
+print(Path("note.md").read_text())
+""")
 
 
 def check_extract_code(
@@ -145,3 +149,49 @@ More text below.
 """,
             line
         )
+
+
+NOTE_TWO_CODES = f"""\
+# Heading
+
+Some text.
+
+```python
+{CODE}\
+```
+
+An explanation
+of some sort.
+
+> And then a quote.
+
+```python
+{ALT}\
+```
+
+Final thoughts:
+
+1. This
+2. Not that
+"""
+
+
+@pytest.mark.parametrize(
+    "line,code_expected",
+    it.chain(
+        it.product([5, 6, 7, 8, 9, 10, 11, 12], [str(CODE)]),
+        it.product([18, 19, 20, 21], [str(ALT)])
+    )
+)
+def test_multiple_codes(line, code_expected):
+    check_extract_code(
+        NOTE_TWO_CODES,
+        line,
+        code_expected
+    )
+
+
+@pytest.mark.parametrize("line", [1, 2, 3, 4, 13, 14, 15, 16, 17, 23, 24, 25, 26])
+def test_multiple_codes_outside(line):
+    with pytest.raises(NoCodeThere):
+        check_extract_code(NOTE_TWO_CODES, line)
