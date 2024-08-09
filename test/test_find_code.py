@@ -25,6 +25,7 @@ class Snippet:
         return len(self.lines)
 
 
+NEWLINE = "\n"
 CODE = Snippet("""\
 import sys
 
@@ -195,3 +196,36 @@ def test_multiple_codes(line, code_expected):
 def test_multiple_codes_outside(line):
     with pytest.raises(NoCodeThere):
         check_extract_code(NOTE_TWO_CODES, line)
+
+
+@pytest.mark.parametrize(
+    "sep,line,code_expected",
+    [
+        (2, 9, str(CODE)),
+        (2, 11, str(CODE)),
+        (2, 13, str(ALT)),
+        (1, 9, str(CODE)),
+        (1, 10, str(CODE)),
+        (1, 11, str(ALT)),
+        (0, 9, str(CODE)),
+        (0, 10, str(ALT)),
+    ]
+)
+def test_codes_juxtaposed(sep, line, code_expected):
+    check_extract_code(
+        f"""\
+Some stuff before.
+
+```
+{CODE}\
+```
+{NEWLINE * sep}\
+```
+{ALT}\
+```
+
+Stuff after.
+""",
+        line,
+        code_expected
+    )
