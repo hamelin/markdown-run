@@ -6,7 +6,7 @@ from typing import (
     Sequence,
 )
 
-from markdown_run import extract_code, NoCodeThere
+from markdown_run import extract_code_and_output, NoCodeThere
 
 
 @dataclass
@@ -42,14 +42,17 @@ print(Path("note.md").read_text())
 def check_extract_code(
     content_note: str,
     num_line: int,
-    code_expected: str = str(CODE)
+    code_expected: str = str(CODE),
+    output_expected: int = -1
 ) -> None:
     with NamedTemporaryFile(mode="w+") as file:
         file.write(content_note)
         file.flush()
         file.seek(0, 0)
 
-        assert code_expected == extract_code(file.name, num_line)
+        code_actual, output_actual = extract_code_and_output(file.name, num_line)
+        assert code_expected == code_actual
+        assert output_expected == output_actual
 
 
 @pytest.mark.parametrize(

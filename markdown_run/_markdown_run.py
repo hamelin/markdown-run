@@ -4,10 +4,16 @@ from mistletoe import Document  # type: ignore
 from mistletoe.block_token import BlockCode, CodeFence  # type: ignore
 import os
 from pathlib import Path
-from typing import Union
+from typing import (
+    Tuple,
+    Union,
+)
 
 
-def extract_code(path_: Union[os.PathLike[str], str], line: int) -> str:
+def extract_code_and_output(
+    path_: Union[os.PathLike[str], str],
+    line: int
+) -> Tuple[str, int]:
     assert line >= 0
     path = Path(path_)
     with path.open(mode="r", encoding="utf-8") as file:
@@ -33,7 +39,7 @@ def extract_code(path_: Union[os.PathLike[str], str], line: int) -> str:
     if not isinstance(snippet, (BlockCode, CodeFence)):
         raise NoCodeThere(path, line)
     assert snippet.language in {"", "python"}
-    return snippet.content.rstrip() + "\n"
+    return snippet.content.rstrip() + "\n", -1
 
 
 @dataclass
