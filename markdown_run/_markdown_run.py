@@ -11,19 +11,51 @@ from typing import (
     cast,
     Never,
     Self,
-    Tuple,
     Union,
 )
 
 
-def extract_code_and_output(
-    path_: Union[os.PathLike[str], str],
+@dataclass
+class Output:
     line: int
-) -> Tuple[str, int]:
-    assert line >= 0
-    note = _Note.parse(Path(path_)).check(line)
-    snippet = note.find_snippet(line)
-    return snippet.content.rstrip() + "\n", _compute_output_line(snippet, note.lines)
+    span: int
+
+    @classmethod
+    def for_code_fence(cls, snippet: CodeFence, lines_note: Sequence[str]) -> Self:
+        # Output should be inserted right after the bottom fence of the code.
+        i_fence_top = snippet.line_number - 1
+        assert re.match(r"^```", lines_note[i_fence_top])
+        i_fence_bottom = i_fence_top + 1 + len(snippet.content.rstrip().split("\n"))
+        assert re.match(r"^```\s*$", lines_note[i_fence_bottom])
+        i_output = i_fence_bottom + 1
+        try:
+            if re.match(r"\^[-a-zA-Z0-9_]+\s*$", lines_note[i_output]):
+                # This is an Obsidian block label.
+                i_output += 1
+        except IndexError:
+            # We are already at the end of the file.
+            pass
+        return cls(line=i_output + 1, span=0)
+
+
+@dataclass
+class Executon:
+    code: str
+    output: Output
+
+    @classmethod
+    def make(cls, code: str, line_output: int, span_output: int) -> Self:
+        return cls(code=code, output=Output(line=line_output, span=span_output))
+
+    @classmethod
+    def extract_from_note(cls, path_: Union[os.PathLike[str], str], line: int) -> Self:
+        assert line >= 0
+        note = _Note.parse(Path(path_)).check(line)
+        snippet = note.find_snippet(line)
+        return cls(
+            code=snippet.content.rstrip() + "\n",
+            output=Output.for_code_fence(snippet, note.lines)
+        )
 
 
 @dataclass
@@ -71,20 +103,3 @@ class _Note:
 class NoCodeThere(Exception):
     path: Path
     line: int
-
-
-def _compute_output_line(snippet: CodeFence, lines_note: Sequence[str]) -> int:
-    # Output should be inserted right after the bottom fence of the code.
-    i_fence_top = snippet.line_number - 1
-    assert re.match(r"^```", lines_note[i_fence_top])
-    i_fence_bottom = i_fence_top + 1 + len(snippet.content.rstrip().split("\n"))
-    assert re.match(r"^```\s*$", lines_note[i_fence_bottom])
-    i_output = i_fence_bottom + 1
-    try:
-        if re.match(r"\^[-a-zA-Z0-9_]+\s*$", lines_note[i_output]):
-            # This is an Obsidian block label.
-            i_output += 1
-    except IndexError:
-        # We are already at the end of the file.
-        pass
-    return i_output + 1

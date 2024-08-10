@@ -6,11 +6,11 @@ from typing import (
     Sequence,
 )
 
-from markdown_run import extract_code_and_output, NoCodeThere
+from markdown_run import Executon, NoCodeThere
 
 
 @dataclass
-class Snippet:
+class SnippetFixture:
     code: str
 
     def __str__(self) -> str:
@@ -26,14 +26,14 @@ class Snippet:
 
 
 NEWLINE = "\n"
-CODE = Snippet("""\
+CODE = SnippetFixture("""\
 import sys
 
 
 def func(x):
     print(sys.executable + " " + x)
 """)
-ALT = Snippet("""\
+ALT = SnippetFixture("""\
 from pathlib import Path
 print(Path("note.md").read_text())
 """)
@@ -41,59 +41,64 @@ print(Path("note.md").read_text())
 
 def check_extract_code(
     content_note: str,
-    num_line: int,
+    line: int,
     code_expected: str,
-    output_expected: int,
+    output_line_expected: int,
+    output_span_expected: int
 ) -> None:
     with NamedTemporaryFile(mode="w+") as file:
         file.write(content_note)
         file.flush()
         file.seek(0, 0)
 
-        code_actual, output_actual = extract_code_and_output(file.name, num_line)
-        assert code_expected == code_actual
-        assert output_expected == output_actual
+        actual = Executon.extract_from_note(file.name, line)
+        assert Executon.make(
+            code_expected,
+            output_line_expected,
+            output_span_expected
+        ) == actual
 
 
 @pytest.mark.parametrize(
-    "lang,num_line",
+    "lang,line",
     [
         ("python", 2),
         ("", 2),
         ("", 1),
     ] + [("python", i) for i in range(3, 8)]
 )
-def test_only_python_code(lang, num_line):
+def test_only_python_code(lang, line):
     check_extract_code(
         f"""\
 ```{lang}
 {CODE}\
 ```
 """,
-        num_line,
+        line,
         str(CODE),
         8,
+        0,
     )
 
 
 def check_no_code_there(content_note: str, line: int) -> None:
     with pytest.raises(NoCodeThere):
-        check_extract_code("", 1, "dummy", -1)
+        check_extract_code("", line, "dummy", 0, 0)
 
 
 def test_no_code_empty():
     check_no_code_there("", 1)
 
 
-@pytest.mark.parametrize("num_line", [9, 10, 1000])
-def test_no_code_beyond_end(num_line):
+@pytest.mark.parametrize("line", [9, 10, 1000])
+def test_no_code_beyond_end(line):
     check_no_code_there(
         f"""\
 ```
 {CODE}\
 ```
 """,
-        num_line,
+        line,
     )
 
 
@@ -139,7 +144,8 @@ def test_one_code_framed_by_content(above, below, offset):
 """,
         line_start_code + offset,
         str(CODE),
-        line_start_code + CODE.num_lines + 1
+        line_start_code + CODE.num_lines + 1,
+        0
     )
 
 
@@ -188,18 +194,19 @@ Final thoughts:
 
 
 @pytest.mark.parametrize(
-    "line,code_expected,output_expected",
+    "line,code_expected,line_expected",
     it.chain(
         it.product([5, 6, 7, 8, 9, 10, 11, 12], [str(CODE)], [12]),
         it.product([18, 19, 20, 21], [str(ALT)], [22])
     )
 )
-def test_multiple_codes(line, code_expected, output_expected):
+def test_multiple_codes(line, code_expected, line_expected):
     check_extract_code(
         NOTE_TWO_CODES,
         line,
         code_expected,
-        output_expected
+        line_expected,
+        0
     )
 
 
@@ -209,7 +216,7 @@ def test_multiple_codes_outside(line):
 
 
 @pytest.mark.parametrize(
-    "sep,line,code_expected,output_expected",
+    "sep,line,code_expected,line_expected",
     [
         (2, 9, str(CODE), 10),
         (2, 11, str(CODE), 10),
@@ -221,7 +228,7 @@ def test_multiple_codes_outside(line):
         (0, 10, str(ALT), 14),
     ]
 )
-def test_codes_juxtaposed(sep, line, code_expected, output_expected):
+def test_codes_juxtaposed(sep, line, code_expected, line_expected):
     check_extract_code(
         f"""\
 Some stuff before.
@@ -238,7 +245,8 @@ Stuff after.
 """,
         line,
         code_expected,
-        output_expected
+        line_expected,
+        0
     )
 
 
@@ -268,7 +276,8 @@ Coda.
 """,
         2,
         str(CODE),
-        9
+        9,
+        0,
     )
 
 
@@ -281,5 +290,6 @@ def test_code_output_extends_file(coda):
 ```{coda}""",
         2,
         str(CODE),
-        7 + len(coda.split("\n"))
+        7 + len(coda.split("\n")),
+        0
     )
