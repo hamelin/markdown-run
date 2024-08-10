@@ -254,3 +254,32 @@ It is what it is.
 """,
         3
     )
+
+
+def test_code_tagged_with_obsidian_block_label():
+    check_extract_code(
+        f"""\
+```python
+{CODE}\
+```
+^the_code
+
+Coda.
+""",
+        2,
+        str(CODE),
+        9
+    )
+
+
+@pytest.mark.parametrize("coda", ["", "\n^thedef"])
+def test_code_output_extends_file(coda):
+    check_extract_code(
+        f"""\
+```
+{CODE}\
+```{coda}""",
+        2,
+        str(CODE),
+        7 + len(coda.split("\n"))
+    )

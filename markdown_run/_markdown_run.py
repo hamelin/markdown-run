@@ -48,6 +48,13 @@ def extract_code_and_output(
     i_fence_bottom = i_fence_top + 1 + len(snippet.content.rstrip().split("\n"))
     assert re.match(r"^```\s*$", lines_note[i_fence_bottom])
     i_output = i_fence_bottom + 1
+    try:
+        if re.match(r"\^[-a-zA-Z0-9_]+\s*$", lines_note[i_output]):
+            # This is an Obsidian block label.
+            i_output += 1
+    except IndexError:
+        # We are already at the end of the file.
+        pass
     line_output = i_output + 1
 
     return snippet.content.rstrip() + "\n", line_output
