@@ -293,3 +293,83 @@ def test_code_output_extends_file(coda):
         7 + len(coda.split("\n")),
         0
     )
+
+
+@pytest.mark.parametrize("label", ["", "^a_label"])
+def test_code_output_follows(label):
+    check_extract_code(
+        f"""\
+# Heading
+
+```python
+{ALT}\
+```
+{label}
+<div class="markdown-run-output">
+<pre>
+asdf
+qwerty
+</pre>
+</div>
+
+Bottom matter.
+""",
+        4,
+        str(ALT),
+        8,
+        6
+    )
+
+
+def test_code_output_further_below():
+    check_extract_code(
+        f"""\
+# Heading
+
+```python
+{ALT}\
+```
+
+Then a paragraph of text.
+
+1. And also a list.
+1. With two items.
+
+<div class="markdown-run-output">
+<pre>
+asdf
+qwerty
+</pre>
+</div>
+""",
+        5,
+        str(ALT),
+        13,
+        6,
+    )
+
+
+def test_code_output_no_proper_class():
+    check_extract_code(
+        f"""\
+# Heading
+
+```python
+{ALT}\
+```
+
+
+
+<div>
+<pre>
+asdf
+qwerty
+</pre>
+</div>
+""",
+        5,
+        str(ALT),
+        7,
+        0,
+    )
+    pytest.fail()
