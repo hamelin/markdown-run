@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 import itertools as it
 from mistletoe import Document, HTMLRenderer  # type: ignore
@@ -6,6 +7,9 @@ import os
 from pathlib import Path
 import re
 from typing import (
+    assert_never,
+    Never,
+    Self,
     Tuple,
     Union,
 )
@@ -16,33 +20,61 @@ def extract_code_and_output(
     line: int
 ) -> Tuple[str, int]:
     assert line >= 0
-    path = Path(path_)
-    lines_note = path.read_text().split("\n")
-    with HTMLRenderer():
-        doc = Document(lines_note)
-    if not doc.children:
-        raise NoCodeThere(path, line)
-    line_last = len(lines_note)
-    if line > line_last:
-        raise NoCodeThere(path, line)
+    note = _Note.parse(Path(path_)).check(line)
+    snippet = note.find_snippet(line)
+    return snippet.content.rstrip() + "\n", _compute_output_line(snippet, note.lines)
 
-    for i, (line_start, line_end) in enumerate(
-        it.pairwise([ch.line_number for ch in doc.children] + [line_last + 1])
-    ):
-        if line >= line_start and line < line_end:
-            snippet = doc.children[i]
-            break
-    else:
-        raise RuntimeError(
-            f"Supposed to be able to find a snippet in file {path}, at line {line}. "
-            "Concurrent modification?"
-        )
 
-    if not isinstance(snippet, CodeFence):
-        raise NoCodeThere(path, line)
-    assert snippet.language in {"", "python"}
+@dataclass
+class _Note:
+    path: Path
+    lines: Sequence[str]
+    doc: Document
 
-    # Output should be inserted right after the closing fence of the code.
+    @classmethod
+    def parse(cls, path: Path) -> "_Note":
+        lines_note = path.read_text().split("\n")
+        with HTMLRenderer():
+            return cls(path=path, lines=lines_note, doc=Document(lines_note))
+
+    def check(self, line: int) -> Self:
+        if not self.doc.children:
+            raise NoCodeThere(self.path, line)
+        if line > self.line_last:
+            raise NoCodeThere(self.path, line)
+        return self
+
+    @property
+    def line_last(self) -> int:
+        return len(self.lines)
+
+    def find_snippet(self, line: int) -> CodeFence:
+        for i, (line_start, line_end) in enumerate(
+            it.pairwise(
+                [ch.line_number for ch in self.doc.children] + [self.line_last + 1]
+            )
+        ):
+            if line >= line_start and line < line_end:
+                snippet = self.doc.children[i]
+                break
+        else:
+            no_snippet: Never
+            assert_never(no_snippet)  # noqa
+
+        if not isinstance(snippet, CodeFence):
+            raise NoCodeThere(self.path, line)
+        assert snippet.language in {"", "python"}
+        return snippet
+
+
+@dataclass
+class NoCodeThere(Exception):
+    path: Path
+    line: int
+
+
+def _compute_output_line(snippet: CodeFence, lines_note: Sequence[str]) -> int:
+    # Output should be inserted right after the bottom fence of the code.
     i_fence_top = snippet.line_number - 1
     assert re.match(r"^```", lines_note[i_fence_top])
     i_fence_bottom = i_fence_top + 1 + len(snippet.content.rstrip().split("\n"))
@@ -55,12 +87,4 @@ def extract_code_and_output(
     except IndexError:
         # We are already at the end of the file.
         pass
-    line_output = i_output + 1
-
-    return snippet.content.rstrip() + "\n", line_output
-
-
-@dataclass
-class NoCodeThere(Exception):
-    path: Path
-    line: int
+    return i_output + 1
