@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 import itertools as it
 from mistletoe import Document, HTMLRenderer  # type: ignore
-from mistletoe.block_token import BlockCode, CodeFence  # type: ignore
+from mistletoe.block_token import CodeFence  # type: ignore
 import os
 from pathlib import Path
+import re
 from typing import (
     Tuple,
     Union,
@@ -37,10 +38,19 @@ def extract_code_and_output(
             "Concurrent modification?"
         )
 
-    if not isinstance(snippet, (BlockCode, CodeFence)):
+    if not isinstance(snippet, CodeFence):
         raise NoCodeThere(path, line)
     assert snippet.language in {"", "python"}
-    return snippet.content.rstrip() + "\n", -1
+
+    # Output should be inserted right after the closing fence of the code.
+    i_fence_top = snippet.line_number - 1
+    assert re.match(r"^```", lines_note[i_fence_top])
+    i_fence_bottom = i_fence_top + 1 + len(snippet.content.rstrip().split("\n"))
+    assert re.match(r"^```\s*$", lines_note[i_fence_bottom])
+    i_output = i_fence_bottom + 1
+    line_output = i_output + 1
+
+    return snippet.content.rstrip() + "\n", line_output
 
 
 @dataclass
