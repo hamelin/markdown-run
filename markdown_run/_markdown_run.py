@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 from typing import (
     assert_never,
+    cast,
     Never,
     Self,
     Tuple,
@@ -58,8 +59,7 @@ class _Note:
                 snippet = self.doc.children[i]
                 break
         else:
-            no_snippet: Never
-            assert_never(no_snippet)  # noqa
+            assert_never(cast(Never, i))  # noqa
 
         if not isinstance(snippet, CodeFence):
             raise NoCodeThere(self.path, line)
